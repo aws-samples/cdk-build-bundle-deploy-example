@@ -258,7 +258,7 @@ $ cdk synth
 You should see output similar to this (`...` used for brevity):
 
 ```bash
-av sa -- cdk synth
+cdk synth
 Bundling asset App/StaticSite/Deployment/Asset1/Stage...
 1.22.4
 yarn install v1.22.4
