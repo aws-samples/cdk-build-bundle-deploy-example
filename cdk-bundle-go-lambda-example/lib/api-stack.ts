@@ -4,6 +4,7 @@ import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as apigatewayv2 from '@aws-cdk/aws-apigatewayv2';
 import * as path from 'path';
+import * as os from 'os';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 
 export class ApiStack extends cdk.Stack {
@@ -13,7 +14,7 @@ export class ApiStack extends cdk.Stack {
     const entry = path.join(__dirname, '../functions/hello');
     const environment = {
       CGO_ENABLED: '0',
-      GOOS: 'linux',
+      GOOS: os.platform(),
       GOARCH: 'amd64',
     };
 
