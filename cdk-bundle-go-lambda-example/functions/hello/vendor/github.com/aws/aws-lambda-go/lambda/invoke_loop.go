@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -13,9 +14,8 @@ import (
 )
 
 const (
-	serializationErrorFormat = `{"errorType": "Runtime.SerializationError", "errorMessage": "%s"}`
-	msPerS                   = int64(time.Second / time.Millisecond)
-	nsPerMS                  = int64(time.Millisecond / time.Nanosecond)
+	msPerS  = int64(time.Second / time.Millisecond)
+	nsPerMS = int64(time.Millisecond / time.Nanosecond)
 )
 
 // startRuntimeAPILoop will return an error if handling a particular invoke resulted in a non-recoverable error
@@ -39,18 +39,19 @@ func startRuntimeAPILoop(ctx context.Context, api string, handler Handler) error
 func handleInvoke(invoke *invoke, function *Function) error {
 	functionRequest, err := convertInvokeRequest(invoke)
 	if err != nil {
-		return fmt.Errorf("unexpected error occured when parsing the invoke: %v", err)
+		return fmt.Errorf("unexpected error occurred when parsing the invoke: %v", err)
 	}
 
 	functionResponse := &messages.InvokeResponse{}
 	if err := function.Invoke(functionRequest, functionResponse); err != nil {
-		return fmt.Errorf("unexpected error occured when invoking the handler: %v", err)
+		return fmt.Errorf("unexpected error occurred when invoking the handler: %v", err)
 	}
 
 	if functionResponse.Error != nil {
-		payload := safeMarshal(functionResponse.Error)
-		if err := invoke.failure(payload, contentTypeJSON); err != nil {
-			return fmt.Errorf("unexpected error occured when sending the function error to the API: %v", err)
+		errorPayload := safeMarshal(functionResponse.Error)
+		log.Printf("%s", errorPayload)
+		if err := invoke.failure(errorPayload, contentTypeJSON); err != nil {
+			return fmt.Errorf("unexpected error occurred when sending the function error to the API: %v", err)
 		}
 		if functionResponse.Error.ShouldExit {
 			return fmt.Errorf("calling the handler function resulted in a panic, the process should exit")
@@ -59,7 +60,7 @@ func handleInvoke(invoke *invoke, function *Function) error {
 	}
 
 	if err := invoke.success(functionResponse.Payload, contentTypeJSON); err != nil {
-		return fmt.Errorf("unexpected error occured when sending the function functionResponse to the API: %v", err)
+		return fmt.Errorf("unexpected error occurred when sending the function functionResponse to the API: %v", err)
 	}
 
 	return nil
@@ -77,6 +78,7 @@ func convertInvokeRequest(invoke *invoke) (*messages.InvokeRequest, error) {
 	res := &messages.InvokeRequest{
 		InvokedFunctionArn: invoke.headers.Get(headerInvokedFunctionARN),
 		XAmznTraceId:       invoke.headers.Get(headerTraceID),
+		RequestId:          invoke.id,
 		Deadline: messages.InvokeRequest_Timestamp{
 			Seconds: deadlineS,
 			Nanos:   deadlineNS,
@@ -102,7 +104,15 @@ func convertInvokeRequest(invoke *invoke) (*messages.InvokeRequest, error) {
 func safeMarshal(v interface{}) []byte {
 	payload, err := json.Marshal(v)
 	if err != nil {
-		return []byte(fmt.Sprintf(serializationErrorFormat, err.Error()))
+		v := &messages.InvokeResponse_Error{
+			Type:    "Runtime.SerializationError",
+			Message: err.Error(),
+		}
+		payload, err := json.Marshal(v)
+		if err != nil {
+			panic(err) // never reach
+		}
+		return payload
 	}
 	return payload
 }
