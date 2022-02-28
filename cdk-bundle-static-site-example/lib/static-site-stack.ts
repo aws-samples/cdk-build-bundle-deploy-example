@@ -1,11 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
-import * as cdk from '@aws-cdk/core';
+import * as cdk from 'aws-cdk-lib';
 import * as fs from 'fs-extra';
-import * as s3 from '@aws-cdk/aws-s3';
-import * as cloudfront from '@aws-cdk/aws-cloudfront';
-import * as origins from '@aws-cdk/aws-cloudfront-origins';
-import * as s3_deployment from '@aws-cdk/aws-s3-deployment';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as s3_deployment from 'aws-cdk-lib/aws-s3-deployment';
+import { Construct } from 'constructs';
 import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 
@@ -15,7 +16,7 @@ export interface StaticSiteStackProps extends cdk.StackProps {
 }
 
 export class StaticSiteStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: StaticSiteStackProps) {
+  constructor(scope: Construct, id: string, props?: StaticSiteStackProps) {
     super(scope, id, props);
 
     const bucket = new s3.Bucket(this, 'HostingStorage', {
@@ -95,7 +96,7 @@ export class StaticSiteStack extends cdk.Stack {
                 return true
               },
             },
-            image: cdk.BundlingDockerImage.fromRegistry('node:lts'),
+            image: cdk.DockerImage.fromRegistry('node:lts'),
             command: [
               'bash', '-c', [
                 'cd /asset-input',

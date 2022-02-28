@@ -1,13 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
-import * as cdk from '@aws-cdk/core';
-import * as lambda from '@aws-cdk/aws-lambda';
-import * as apigatewayv2 from '@aws-cdk/aws-apigatewayv2';
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigatewayv2 from '@aws-cdk/aws-apigatewayv2-alpha';
+import * as integrations from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import * as path from 'path';
+import { Construct } from 'constructs';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 
 export class ApiStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const entry = path.join(__dirname, '../functions/hello');
@@ -60,7 +62,7 @@ export class ApiStack extends cdk.Stack {
               return true
             },
           },
-          image: lambda.Runtime.GO_1_X.bundlingDockerImage, // lambci/lambda:build-go1.x
+          image: lambda.Runtime.GO_1_X.bundlingImage, // lambci/lambda:build-go1.x
           command: [
             'bash', '-c', [
               'go test -v',
@@ -77,16 +79,14 @@ export class ApiStack extends cdk.Stack {
     const api = new apigatewayv2.HttpApi(this, 'HelloApi', {
       createDefaultStage: true,
       corsPreflight: {
-        allowMethods: [ apigatewayv2.HttpMethod.GET ],
+        allowMethods: [ apigatewayv2.CorsHttpMethod.GET ],
         allowOrigins: ['*']
       }
     });
 
     api.addRoutes({
       path: '/hello',
-      integration: new apigatewayv2.LambdaProxyIntegration({
-        handler
-      }),
+      integration: new integrations.HttpLambdaIntegration('hello', handler),
       methods: [apigatewayv2.HttpMethod.GET]
     });
 
